@@ -46,11 +46,11 @@ Using a local database seemed preferable to making remote API calls, whois, dig,
        user=nobody argv=/usr/local/bin/policyd-asn
    ```
 
-6. Add the policy service to your `/etc/postfix/main.cf`:
+6. Add the policy service `check_policy_service unix:private/policyd-asn` to your `/etc/postfix/main.cf`:
    ```
    smtpd_client_restrictions = permit_mynetworks,
        reject_unknown_client_hostname,
-       **check_policy_service unix:private/policyd-asn**
+       check_policy_service unix:private/policyd-asn
    ```
 
 7. Reload Postfix
