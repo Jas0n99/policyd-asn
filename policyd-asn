@@ -1,0 +1,41 @@
+#!/bin/bash
+
+################################################################################
+# policyd-asn - Postfix policy daemon for ASN-based blocking
+#
+# Author:       Jason Rabel
+# Repository:   https://github.com/Jas0n99/policyd-asn
+# Version:      1.0.0
+# License:      MIT
+################################################################################
+
+DB_ASN="/var/lib/GeoIP/GeoLite2-ASN.mmdb"
+ASN_BLOCKLIST="/etc/postfix/client_asn_access"
+
+respond() {
+    echo "action=$*"
+    echo ""
+    exit 0
+}
+
+# Read input from Postfix
+while IFS='=' read -r key value; do
+    [[ -z "$key" ]] && break
+    [[ "$key" == "client_address" ]] && client_address="$value"
+done
+
+# Sanity checks
+command -v mmdblookup >/dev/null 2>&1 || respond "DUNNO"
+[[ ! -f "$DB_ASN" ]] && respond "DUNNO"
+[[ ! -f "$ASN_BLOCKLIST" ]] && respond "DUNNO"
+[[ -z "$client_address" ]] && respond "DUNNO"
+
+# Get ASN
+CLIENT_ASN=$(mmdblookup --file "$DB_ASN" --ip "$client_address" autonomous_system_number 2>/dev/null | awk 'NF {print $1; exit}')
+
+# Check blocklist
+if [[ -n "$CLIENT_ASN" ]] && grep -q "^${CLIENT_ASN}$" "$ASN_BLOCKLIST" 2>/dev/null; then
+    respond "REJECT ASN $CLIENT_ASN permanently blocked due to excessive spam"
+else
+    respond "DUNNO"
+fi
